@@ -4,6 +4,22 @@ All notable changes to this skill will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.0] — 2026-05-20
+
+Audit mode gets a visual upgrade and a sharper quality gate. Create mode is unchanged.
+
+### Added
+- **Branded HTML report (Audit)** — the default audit output is now a self-contained `.html` file with auto-looping CSS demos beside each Critical and Important finding, so reviewers can *see* the recommended motion instead of mentally simulating it from code. Writes to `motion-audits/{project-name}-{ISO-date}.html` and opens in the default browser. Cross-platform browser-open (macOS/Linux/Windows/WSL) with a print-the-path fallback.
+- `references/demo-shell.html` — the visual container template for per-finding demo cards. Defines CSS tokens, the `.demo-card` component, a loop indicator, the `prefers-reduced-motion` guard, and a suffixed-naming contract so multiple findings don't collide on keyframe/class names.
+- **Anti-AI-slop checklist (Audit)** — seven named AI-slop motion categories (pulsing indicators, blur-everywhere entrances, hover-scale-on-everything, stagger-spam-on-every-list, bouncy-springs-on-utility-actions, uniform-fade-in-on-every-element, motion-on-mount-for-static-content), each with a frequency heuristic so single intentional uses don't trip the gate.
+- Agent Gotchas self-check in `workflows/audit.md` for HTML-report generation failure modes.
+
+### Changed
+- Renamed `references/common-mistakes.md` → `references/anti-checklist.md` — now the audit's explicit quality gate. All prior anti-pattern content is preserved verbatim; the AI-slop categories are layered on top.
+- `references/output-format.md` rewritten as a two-mode template: HTML mode (default) and terminal mode (the prior decorated-markdown report, preserved as the `--terminal` fallback).
+- `workflows/audit.md` STEP 3 now writes HTML by default; terminal report is opt-in via `--terminal` / `--inline` / natural language.
+- Audit description updated to mention AI-slop detection and the HTML report.
+
 ## [2.0.0] — 2026-05-15
 
 Major release: the skill now **builds** interactive components with motion, not just audits existing ones. Audit behavior is unchanged — existing workflows are preserved verbatim — but the skill's scope and identity expand enough to warrant a major version.

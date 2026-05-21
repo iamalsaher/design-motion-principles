@@ -8,8 +8,9 @@ Read as you reach each step (not all upfront):
 1. `references/audit-checklist.md` — your systematic guide (STEP 2)
 2. The weighted designer file(s) — `emil-kowalski.md`, `jakub-krehel.md`, `jhey-tompkins.md` (STEP 2)
 3. `references/accessibility.md` — mandatory every audit (STEP 2)
-4. `references/common-mistakes.md` — anti-patterns to check against (STEP 2)
-5. `references/output-format.md` — the report template (STEP 3)
+4. `references/anti-checklist.md` — the quality gate: AI-slop motion categories + anti-patterns to flag (STEP 2)
+5. `references/output-format.md` — the report template, HTML mode + terminal mode (STEP 3)
+6. `references/demo-shell.html` — the demo-card template for HTML-mode per-finding demos (STEP 3)
 
 ---
 
@@ -114,24 +115,79 @@ Based on your context weighting, read the relevant designer files:
 
 ### 2c. Read Topical References as Needed
 - **Read `references/accessibility.md`** — MANDATORY. Always check for prefers-reduced-motion. No exceptions.
-- **Read `references/common-mistakes.md`** — Check the codebase against these anti-patterns
+- **Read `references/anti-checklist.md`** — Apply this as the audit's quality gate. AI-slop categories at the top (pulsing indicators, hover-scale-on-everything, stagger-spam, etc.) trigger findings; perspective-specific and general anti-patterns sit below. Each category includes a frequency heuristic so single intentional uses don't trip the gate.
 - **Read `references/performance.md`** — If you see complex animations, check for GPU optimization issues
-- **Read `references/motion-cookbook.md`** — Reference when making specific implementation recommendations (the recommended fix code)
+- **Read `references/motion-cookbook.md`** — Reference when making specific implementation recommendations (the recommended fix code, including the per-finding demo motion in HTML mode)
 
 ---
 
-## STEP 3: Output Format
+## STEP 3: Output Format (HTML by default)
 
-**Read `references/output-format.md`** for the full report template.
+The audit produces a **self-contained HTML report** with auto-looping CSS demos beside Critical and Important findings. **Read `references/output-format.md`** for the full template (both HTML mode and terminal mode).
 
-The template covers:
-- Quick summary box (severity counts + primary perspective)
-- Overall assessment paragraph
-- Three per-designer sections (Emil / Jakub / Jhey) with decorated headers
-- Combined recommendations tables (Critical / Important / Opportunities)
-- Designer reference summary (who was referenced most + lean-differently guidance)
+### Default behavior — write and open the HTML report
 
-Do not summarize — users want full per-designer perspectives.
+1. **Resolve the write location.** The file is written to `motion-audits/{project-name}-{ISO-date}.html` in the audited project's root.
+   - **Audited project root**: run `git rev-parse --show-toplevel` from the agent's cwd. If it succeeds, use that path. If it fails (no `.git` ancestor), use cwd.
+   - **`{project-name}`**: the `name` field from `package.json` at the project root if it exists; else the `name` field from `pyproject.toml`; else the basename of the project root. Strip any scoping prefix (`@scope/pkg` → `pkg`) and sanitize to lowercase kebab-case (`[a-z0-9-]`, replace others with `-`).
+   - **`{ISO-date}`**: today's date as `YYYY-MM-DD`.
+   - Example: `<project-root>/motion-audits/my-app-2026-05-20.html`.
+   - Do not modify `.gitignore`. The user sees `motion-audits/` in `git status` and decides whether to ignore it.
+
+2. **Read `references/demo-shell.html`** and use it as the template for each demo card. Embed one card per Critical + Important finding (Opportunities do not get demo cards). Use the suffixed-naming contract — `@keyframes motion-{n}-...` and `.demo-card-{n}__motion-target`, `{n}` = the finding's 1-indexed position across the whole report — so multiple findings don't collide on CSS names.
+
+3. **Generate per-finding motion code** by reading the audited code, the relevant lens reference, and `references/motion-cookbook.md` for the recipe. Use the shell's 0% / 66% / 100% cadence at `animation-duration: 3s` (~2s motion, ~1s hold, loop). The `@keyframes` 100% state must match the motion-target's default static rendering so the shell's `prefers-reduced-motion` guard shows the correct final visual.
+
+4. **Write the file.** Create `motion-audits/` if it doesn't exist. Write the complete self-contained HTML document.
+
+5. **Open in the default browser** via OS-detected Bash dispatch:
+
+   ```bash
+   path="<absolute path to the HTML file>"
+   if [ -n "$WSL_DISTRO_NAME" ] || grep -qi microsoft /proc/version 2>/dev/null; then
+     win_path=$(wslpath -w "$path")
+     cmd.exe /c start "" "$win_path" 2>/dev/null
+   else
+     case "$(uname -s)" in
+       Darwin)               open "$path" ;;
+       Linux)                xdg-open "$path" ;;
+       MINGW*|MSYS*|CYGWIN*) start "" "$path" ;;
+       *)                    echo "Unknown platform — open this file manually: $path" ;;
+     esac
+   fi
+   ```
+
+   If the open command returns non-zero or the platform is unrecognized, print `Open this file in your browser: {absolute path}` and continue. Never abort the audit because of a failed browser-open.
+
+6. **Print the 3-line terminal summary:**
+
+   ```
+   🎬 Motion audit complete — 🔴 {N} Critical · 🟡 {N} Important · 🟢 {N} Opportunities
+   📄 Report: {absolute path}
+   💡 Want the full report inline instead? Re-run with --terminal or say "show inline".
+   ```
+
+### Terminal mode (flag-triggered)
+
+When the user signals terminal mode (`--terminal` / `--inline` / `--no-html` flag, or "show the full report inline" / "skip the HTML" / "terminal only"), **skip the HTML write and the browser-open** and render the decorated-markdown report inline per `references/output-format.md` terminal mode. Do not print the 3-line summary in this case.
+
+Do not summarize the audit content in either mode — users want full per-lens perspectives.
+
+---
+
+## Agent Gotchas (Self-Check Before Writing the Report)
+
+Common failure modes during HTML report generation. Most break silently or only manifest when a second finding lands in the same report.
+
+- **Don't reuse keyframe or class names across findings.** Each demo uses `@keyframes motion-{n}-...` and `.demo-card-{n}__motion-target` where `{n}` is the 1-indexed position across the WHOLE report. Duplicate names mean the second finding shadows the first and the first demo breaks silently.
+- **Don't redefine the shell's CSS variables.** Per-finding code uses `var(--bg)`, `var(--fg)`, `var(--border)`, `var(--accent)`, `var(--loop-dim)`, `var(--sans)`, `var(--mono)`. Hard-coding colors or fonts breaks dark mode and typography consistency.
+- **Don't write per-finding overrides inside the `prefers-reduced-motion` block.** The shell's guard collapses all `[class*="__motion-target"]` animations. Make the `@keyframes` 100% state match the motion-target's default static rendering instead.
+- **Don't include demo cards for Opportunities.** Demos are reserved for Critical and Important. Surface Opportunities in text only.
+- **Don't animate the report itself.** No entrance, scroll, or mount animations on the report chrome — only the demo cards animate. Animating the report reproduces the AI-slop patterns the audit exists to catch.
+- **Don't write to cwd if `git rev-parse --show-toplevel` succeeds.** The report goes to `{project-root}/motion-audits/`. Only fall back to cwd when git returns nonzero.
+- **Don't abort the audit if browser-open fails.** A non-zero exit code is a "no default handler" condition, not an error. Print the path and continue.
+- **Don't modify `.gitignore`.** The skill never touches it. The user adds `motion-audits/` themselves if they want.
+- **Don't summarize per-lens findings.** Each section needs its own findings + working-well items + the `Through {Designer}'s lens:` summary.
 
 ---
 
@@ -141,5 +197,7 @@ Do not summarize — users want full per-designer perspectives.
 - [ ] Motion gap analysis run — conditional renders checked for missing animation
 - [ ] Weighting proposed and confirmed by the user
 - [ ] Audit checklist worked through systematically
+- [ ] Anti-checklist applied — AI-slop categories checked against the codebase
 - [ ] Accessibility checked — prefers-reduced-motion verified (mandatory)
-- [ ] Report follows output-format.md with full per-designer sections
+- [ ] HTML report written to `motion-audits/`, opened in browser, 3-line summary printed (or terminal-mode report rendered inline when flagged)
+- [ ] Report follows output-format.md with full per-lens sections; Critical + Important findings have looping demo cards

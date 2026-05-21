@@ -28,7 +28,7 @@ The point isn't a single set of rules — it's the productive tension between th
 
 **Create** — Build interactive components with motion baked in. The skill runs a light discovery (project context + which lenses to weight), then generates components — React, Framer Motion, CSS, or HTML — applying the right recipes, accessibility, and performance defaults.
 
-**Audit** — Review existing motion design. The skill does reconnaissance on your project, runs a motion-gap analysis (finds UI that *should* animate but doesn't), proposes a per-lens weighting, and delivers a structured per-designer report.
+**Audit** — Review existing motion design. The skill does reconnaissance on your project, runs a motion-gap analysis (finds UI that *should* animate but doesn't), checks the code against an anti-AI-slop checklist (pulsing indicators, hover-scale-on-everything, stagger-spam, and other 2026 AI-generated motion tells), proposes a per-lens weighting, and delivers a **branded HTML report** with auto-looping CSS demos beside each Critical and Important finding. Pass `--terminal` for the inline markdown report instead.
 
 The skill detects which mode you want from your request. If it's ambiguous, it asks.
 
@@ -38,9 +38,13 @@ The skill detects which mode you want from your request. If it's ambiguous, it a
 
 2. **Motion gap analysis** (Audit) — Searches for conditional UI that should be animated but isn't: conditional renders without `AnimatePresence`, dynamic styles without transitions, instant state swaps.
 
-3. **Motion cookbook** (Create) — A single, consolidated recipe library: enter/exit animations, easing, springs, clip-path, `@property`, shared-layout/FLIP, scroll-driven animation.
+3. **Anti-AI-slop checklist** (Audit) — A quality gate that flags the recognizable motion fingerprints of AI-generated UIs: pulsing indicators, blur-everywhere entrances, hover-scale-on-everything, stagger-spam, bouncy springs on utility actions, uniform fade-ins, motion-on-mount for static content. Each category has a frequency heuristic so single intentional uses don't trip it.
 
-4. **Creation gotchas** (Create) — Built-in self-check against the common failure modes of AI-generated motion: decorative-by-default animation, `scale(0)` starts, bare `ease`, missing `prefers-reduced-motion`.
+4. **Branded HTML report** (Audit) — The default audit output is a self-contained HTML file with auto-looping CSS demos beside each Critical and Important finding, so you can *see* the recommended motion instead of reading code. Writes to `motion-audits/`, opens in your browser. `--terminal` falls back to the inline markdown report for headless/CI use.
+
+5. **Motion cookbook** (Create) — A single, consolidated recipe library: enter/exit animations, easing, springs, clip-path, `@property`, shared-layout/FLIP, scroll-driven animation.
+
+6. **Creation gotchas** (Create) — Built-in self-check against the common failure modes of AI-generated motion: decorative-by-default animation, `scale(0)` starts, bare `ease`, missing `prefers-reduced-motion`.
 
 ## Usage
 
@@ -88,13 +92,14 @@ skills/
           ├── motion-cookbook.md       # All motion recipes (single source of truth)
           ├── creation-gotchas.md      # Failure modes when generating motion
           ├── audit-checklist.md       # Structured audit criteria
-          ├── common-mistakes.md       # Anti-patterns to flag in review
+          ├── anti-checklist.md        # Quality gate: AI-slop categories + anti-patterns
+          ├── demo-shell.html          # Visual template for HTML-report demo cards
           ├── emil-kowalski.md         # Emil's philosophy & decision frameworks
           ├── jakub-krehel.md          # Jakub's philosophy & decision frameworks
           ├── jhey-tompkins.md         # Jhey's philosophy & decision frameworks
           ├── accessibility.md         # Motion accessibility guidelines
           ├── performance.md           # Performance best practices
-          └── output-format.md         # Report template for audits
+          └── output-format.md         # Report template (HTML + terminal modes)
 ```
 
 ## Manual Installation
